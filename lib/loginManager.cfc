@@ -44,7 +44,7 @@
 		<cfset $.event('siteID',siteID)>
 	</cfif>
 	
-	<cfset userStruct=lookUpUser($.event("username"),$.event("password"),$.event("externalLoginMode"))>
+	<cfset userStruct=lookUpUser(username=$.event("username"),password=$.event("password"),loginMode=$.event("externalLoginMode"),$=$)>
 	
 	<cfif userStruct.found>
 					            
@@ -68,7 +68,7 @@
 			</cfloop>
 		</cfif>
 		
-		<cflock name="#$.event('siteID')##userStruct.username#userBridge" timeout="30" type="exclusive">
+		<cflock name="#$.event('siteID')##userStruct.slatwallAccount.getaccountID()#userBridge" timeout="30" type="exclusive">
 			<!--- Check to see if the user has previous login into the system --->
 			<cfset userBean=$.getBean('user').loadBy(username=userStruct.username,siteID=$.event('siteID'))>						
 						
@@ -98,7 +98,8 @@
 		</cflock>
 		<cfset $.event("username",userStruct.username)>
 		<cfset $.event("password",tempPassword)>
-		
+		<!--- Sync up CMS Id in slatwall --->
+		<cfset userStruct.slatwallAccount.setCmsAccountID(userBean.getUserID())>
 		<!--- log the user in --->
 		<cfif mode eq "auto">			
 			<cfset getBean("userUtility").loginByUserID(userBean.getUserID(),siteID) />			
@@ -119,33 +120,38 @@
 </cffunction>
 
 <cffunction name="lookupUser" output="false">
-<cfargument name="username">
-<cfargument name="password">
+	<cfargument name="username">
+	<cfargument name="password">
+	<cfargument name="$">
+	<cfset var login={}>
+	<cfset login.emailAddress=arguments.username>
+	<cfset login.password=arguments.password>
+	<cfset var returnStruct=structNew()>
+	<!--- Set up slatwall early --->
+	<cfobject component="Slatwall.integrationServices.mura.model.handler.Handler" name="muraHandler">
+	<cfset muraHandler.verifySlatwallRequest(arguments.$)>
 
-<cfset var returnStruct=structNew()>
+	<cfset var account = $.slatwall.getService('AccountService').processAccount( $.slatwall.getAccount(), login, 'login' )>
+	<cfif  $.slatwall.getLoggedInFlag()>
+		<cfset returnStruct.found=true>
+		<cfset returnStruct.fname= $.slatwall.getAccount().getFirstName()>
+		<cfset returnStruct.lname= $.slatwall.getAccount().getFirstName()>
+		<cfset returnStruct.username= $.slatwall.getAccount().getPrimaryEmailAddress().getEmailAddress()>
+		<cfset returnStruct.remoteID= $.slatwall.getAccount().getAccountID()>
+		<cfset returnStruct.email= $.slatwall.getAccount().getPrimaryEmailAddress().getEmailAddress()>
+		<!--- The memberships attribute is a comma separated list of user groups or roles that this user  should be assigned (IE. "Sales,Member,Board of Directors")--->
+		<cfset returnStruct.memberships="">
+		<cfset returnStruct.slatwallAccount=$.slatwall.getAccount()>
+	<cfelse>
 
-<!--- Do you custom logic to look up use in external user database.
-Set the "returnStruct .success" variables. to true or false depending if the user was found.--->
-<cfif arguments.username eq "John">
-	<cfset returnStruct.found=true>
-	<cfset returnStruct.fname= "John">
-	<cfset returnStruct.lname= "Doe">
-	<cfset returnStruct.username= "JohnDoe">
-	<cfset returnStruct.remoteID= "JohnDoe">
-	<cfset returnStruct.email= "john@example.com">
-	<!--- The memberships attribute is a comma separated list of user groups or roles that this user  should be assigned (IE. "Sales,Member,Board of Directors")--->
-	<cfset returnStruct.memberships="">
-<cfelse>	
-
-	<cfset returnStruct.found=false>
-	<cfset returnStruct.fname= "">
-	<cfset returnStruct.lname= "">
-	<cfset returnStruct.username= "">
-	<cfset returnStruct.email= "">
-	<cfset returnStruct.memberships="">
-</cfif>
-
-<cfreturn returnStruct>
+		<cfset returnStruct.found=false>
+		<cfset returnStruct.fname= "">
+		<cfset returnStruct.lname= "">
+		<cfset returnStruct.username= "">
+		<cfset returnStruct.email= "">
+		<cfset returnStruct.memberships="">
+	</cfif>
+	<cfreturn returnStruct>
 </cffunction>
 
 <cffunction name="getSiteID" output="false" returntype="string">

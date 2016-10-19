@@ -14,10 +14,10 @@
    limitations under the License.
 -->
 <plugin>
-<name>User Bridge</name>
+<name>Slatwall User User Bridge</name>
 <version>1.0</version>
 <provider>Blue River</provider>
-<package>userbridge</package>
+<package>saltwalluserbridge</package>
 <directoryFormat>packageOnly</directoryFormat>
 <loadPriority>5</loadPriority>
 <providerURL>http://blueriver.com</providerURL>
@@ -27,7 +27,7 @@
 	<setting>
 		<name>AdminGroup</name>
 		<label>Admin Group Mapping</label>
-		<hint>This is the active directory group that represents the Sava 'Admin' group membership.</hint>
+		<hint>This is the active directory group that represents the 'Admin' group membership.</hint>
 		<type>text</type>
 		<required>true</required>
 		<validation></validation>
